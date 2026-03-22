@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 品牌色 */
+  --brand: #2563EB;
+  --brand-hover: #1D4ED8;
+  --brand-light: #EFF6FF;
+  --brand-fade: rgba(37,99,235,0.08);
+
+  /* 分类色 */
+  --cat-food: #EF6C57;
+  --cat-transport: #38BDF8;
+  --cat-daily: #FBBF24;
+  --cat-housing: #8B5CF6;
+  --cat-fashion: #EC4899;
+  --cat-digital: #3B82F6;
+  --cat-enter: #10B981;
+  --cat-health: #06B6D4;
+  --cat-edu: #7C3AED;
+  --cat-tel: #6366F1;
+  --cat-fin: #F59E0B;
+  --cat-transfer: #F43F5E;
+  --cat-none: #9CA3AF;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background-color: #F5F6FA;
+  color: #111827;
+  line-height: 1.6;
+}
+
+/* 金额等宽字体 */
+.amount-text {
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", "JetBrains Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 淡入上移动画 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 400ms ease-out both;
+}
+
+/* 卡片 hover 上浮效果 */
+.card-hover {
+  transition: transform 250ms ease-out, box-shadow 250ms ease-out;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* 按钮点按缩放 */
+button:active {
+  transform: scale(0.95);
+  transition: transform 150ms ease-out;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
