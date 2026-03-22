@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Transaction, ImportRecord } from '@/types';
+import { Transaction, ImportRecord, CategoryType, ClassifySource } from '@/types';
 import { db, getImportRecords } from '@/db';
 import { classifierOrchestrator } from '@/core/classifier/orchestrator';
 
@@ -72,8 +72,8 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
 
   updateTransactionCategory: async (id, category, source) => {
     await db.transactions.update(id, {
-      category,
-      classifySource: source,
+      category: category as CategoryType,
+      classifySource: source as ClassifySource,
       classifyConfidence: source === 'manual' ? 1.0 : undefined,
     });
     await get().loadTransactions();

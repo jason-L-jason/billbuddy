@@ -343,9 +343,33 @@ const UploadPage: React.FC = () => {
 
   return (
     <div className="animate-fade-in-up space-y-6">
+      {/* 欢迎 Banner（首次使用引导） */}
+      {summaries.length === 0 && !isProcessing && (
+        <div className="bg-gradient-to-r from-brand to-purple-600 rounded-r-lg p-6 text-white">
+          <h2 className="text-xl font-bold mb-2">👋 欢迎使用 BillBuddy</h2>
+          <p className="text-white/80 text-sm">
+            导入你的微信/支付宝账单，自动分类分析每月消费。三步搞定：
+          </p>
+          <div className="flex gap-6 mt-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">1</span>
+              <span className="text-white/90">上传账单文件</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">2</span>
+              <span className="text-white/90">自动解析分类</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">3</span>
+              <span className="text-white/90">查看消费洞察</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 上传区域 */}
       <div
-        className={`border-2 border-dashed rounded-r-lg p-12 text-center transition-all cursor-pointer ${
+        className={`border-2 border-dashed rounded-r-lg p-10 md:p-12 text-center transition-all cursor-pointer ${
           isDragging
             ? 'border-brand bg-brand-light scale-[1.01]'
             : 'border-gray-300 bg-white hover:border-brand hover:bg-brand-fade'
@@ -367,24 +391,27 @@ const UploadPage: React.FC = () => {
         <CloudUploadIcon size="48px" className="mx-auto mb-4 text-gray-400" />
 
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          拖拽上传文件
+          {isDragging ? '松开即可上传' : '拖拽上传文件'}
         </h3>
 
         <div className="text-sm text-gray-500 space-y-1 mb-4">
           <p><strong>支付账单：</strong>微信账单 XLSX/CSV · 支付宝账单 CSV</p>
-          <p><strong>购物清单：</strong>淘宝订单 Excel</p>
+          <p><strong>购物清单：</strong>淘宝订单 Excel（可自动匹配支付宝交易）</p>
         </div>
 
         <Button theme="primary" size="large">
           选择文件
         </Button>
-        <p className="text-xs text-gray-400 mt-2">支持多选</p>
+        <p className="text-xs text-gray-400 mt-2">支持多选 · 重复文件自动去重</p>
       </div>
 
       {/* 解析进度 */}
       {isProcessing && (
         <div className="bg-white rounded-r-md p-6 shadow-card">
-          <p className="text-sm text-gray-600 mb-2">{progressText}</p>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-gray-700 font-medium">{progressText || '处理中...'}</p>
+          </div>
           <Progress percentage={progress} />
         </div>
       )}
@@ -392,7 +419,10 @@ const UploadPage: React.FC = () => {
       {/* 解析结果 */}
       {summaries.length > 0 && (
         <div className="bg-white rounded-r-md p-6 shadow-card space-y-4">
-          <h3 className="text-base font-semibold text-gray-900">导入结果</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">✅</span>
+            <h3 className="text-base font-semibold text-gray-900">导入完成</h3>
+          </div>
 
           {summaries.map((s, i) => (
             <div key={i} className="flex items-center gap-4 p-3 bg-gray-50 rounded-r-sm">
@@ -403,8 +433,8 @@ const UploadPage: React.FC = () => {
               }`}>
                 {s.platform}
               </span>
-              <span className="text-sm text-gray-700 flex-1">{s.fileName}</span>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-700 flex-1 truncate">{s.fileName}</span>
+              <span className="text-sm text-gray-500 whitespace-nowrap">
                 解析 {s.totalParsed} 笔 · 新增 {s.newImported} 笔
                 {s.duplicateSkipped > 0 && ` · 重复 ${s.duplicateSkipped} 笔`}
               </span>
@@ -414,7 +444,7 @@ const UploadPage: React.FC = () => {
           {summaries.some((s) => s.unclassifiedCount > 0) && (
             <Alert
               theme="warning"
-              message={`${summaries.reduce((s, r) => s + r.unclassifiedCount, 0)} 笔交易尚未分类，你可以在明细页手动分类`}
+              message={`${summaries.reduce((s, r) => s + r.unclassifiedCount, 0)} 笔交易尚未分类，你可以在明细页点击标签手动分类`}
             />
           )}
 
@@ -433,9 +463,10 @@ const UploadPage: React.FC = () => {
         </div>
       )}
 
-      {/* 当前模式 */}
-      <div className="text-center text-xs text-gray-400">
-        当前模式：🔧 本地规则模式 · 数据仅存储在浏览器中
+      {/* 数据隐私提示 */}
+      <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+        <span>🔒</span>
+        <span>数据仅存储在你的浏览器中，不会上传到任何服务器</span>
       </div>
 
       {/* 导入历史 */}

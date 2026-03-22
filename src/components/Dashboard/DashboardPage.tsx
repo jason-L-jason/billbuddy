@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo } from 'react';
-import { Card, Alert } from 'tdesign-react';
+import React, { useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, Alert, Button } from 'tdesign-react';
 import ReactECharts from 'echarts-for-react';
 import { useTransactionsStore } from '@/store/transactions';
 import { Transaction, CATEGORY_COLORS, CategoryType } from '@/types';
@@ -7,6 +8,7 @@ import { formatAmount, formatMonth } from '@/utils/format';
 
 const DashboardPage: React.FC = () => {
   const { transactions, isLoading, loadTransactions, selectedMonth } = useTransactionsStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadTransactions();
@@ -14,14 +16,47 @@ const DashboardPage: React.FC = () => {
 
   const stats = useMemo(() => computeStats(transactions), [transactions]);
 
+  // 点击分类跳转到明细页
+  const goToCategory = useCallback((category: string) => {
+    navigate(`/transactions?category=${encodeURIComponent(category)}`);
+  }, [navigate]);
+
+  // Loading 骨架屏
+  if (isLoading) {
+    return (
+      <div className="animate-fade-in-up space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-r-md p-5 shadow-card animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-20 mb-3" />
+              <div className="h-8 bg-gray-200 rounded w-32" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-white rounded-r-md p-6 shadow-card animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-24 mb-4" />
+              <div className="h-[260px] bg-gray-100 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // 空状态
   if (transactions.length === 0) {
     return (
       <div className="animate-fade-in-up bg-white rounded-r-md shadow-card p-12 text-center">
         <p className="text-5xl mb-4">📊</p>
-        <p className="text-gray-500 text-lg">
-          {formatMonth(selectedMonth)} 没有数据
+        <p className="text-gray-700 text-lg font-medium mb-1">
+          {formatMonth(selectedMonth)} 暂无数据
         </p>
-        <p className="text-gray-400 mt-1">试试导入账单？</p>
+        <p className="text-gray-400 text-sm mb-6">导入账单后，消费洞察一目了然</p>
+        <Button theme="primary" onClick={() => navigate('/')}>
+          去导入账单
+        </Button>
       </div>
     );
   }
@@ -49,7 +84,7 @@ const DashboardPage: React.FC = () => {
       )}
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
           title="本月总支出"
           value={formatAmount(stats.totalExpense)}
@@ -69,17 +104,33 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* 图表区 */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 饼图 */}
         <Card className="shadow-card">
           <h3 className="text-base font-semibold text-gray-900 mb-4">分类占比</h3>
-          <ReactECharts option={getPieOption(stats.categoryBreakdown)} style={{ height: 300 }} />
+          <ReactECharts
+            option={getPieOption(stats.categoryBreakdown)}
+            style={{ height: 300 }}
+            onEvents={{
+              click: (params: { name: string }) => {
+                if (params.name) goToCategory(params.name);
+              },
+            }}
+          />
         </Card>
 
         {/* 条形图 */}
         <Card className="shadow-card">
           <h3 className="text-base font-semibold text-gray-900 mb-4">分类排行</h3>
-          <ReactECharts option={getBarOption(stats.categoryBreakdown)} style={{ height: 300 }} />
+          <ReactECharts
+            option={getBarOption(stats.categoryBreakdown)}
+            style={{ height: 300 }}
+            onEvents={{
+              click: (params: { name: string }) => {
+                if (params.name) goToCategory(params.name);
+              },
+            }}
+          />
         </Card>
       </div>
 
@@ -88,7 +139,11 @@ const DashboardPage: React.FC = () => {
         <h3 className="text-base font-semibold text-gray-900 mb-4">Top 5 大额支出</h3>
         <div className="space-y-3">
           {stats.topExpenses.map((t, i) => (
-            <div key={t.id || i} className="flex items-center gap-3 py-2">
+            <div
+              key={t.id || i}
+              className="flex items-center gap-3 py-2 px-2 rounded-md hover:bg-gray-50 cursor-pointer transition-colors"
+              onClick={() => goToCategory(t.category)}
+            >
               <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-medium">
                 {i + 1}
               </span>
@@ -210,6 +265,11 @@ function getPieOption(data: CategoryItem[]) {
       avoidLabelOverlap: true,
       itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
       label: { show: true, formatter: '{b}\n{d}%', fontSize: 12 },
+      emphasis: {
+        scaleSize: 8,
+        label: { fontSize: 14, fontWeight: 'bold' },
+      },
+      cursor: 'pointer',
       data: data.map((item) => ({
         name: item.name,
         value: Math.round(item.amount * 100) / 100,
@@ -234,6 +294,7 @@ function getBarOption(data: CategoryItem[]) {
     series: [{
       type: 'bar',
       barWidth: 16,
+      cursor: 'pointer',
       itemStyle: {
         borderRadius: [0, 4, 4, 0],
         color: (params: { dataIndex: number }) => {

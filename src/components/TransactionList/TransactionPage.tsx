@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Input, Select, Alert, Button, Tag, Popconfirm, MessagePlugin } from 'tdesign-react';
 import { SearchIcon, DownloadIcon, DeleteIcon, RefreshIcon, ChevronDownIcon, ChevronUpIcon, LinkIcon } from 'tdesign-icons-react';
 import { useTransactionsStore } from '@/store/transactions';
@@ -10,12 +11,32 @@ import CategoryBadge from './CategoryBadge';
 
 const TransactionPage: React.FC = () => {
   const { transactions, isLoading, loadTransactions, selectedMonth, reclassifyAll } = useTransactionsStore();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchText, setSearchText] = useState('');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterCategory, setFilterCategory] = useState<string>(
+    searchParams.get('category') || 'all'
+  );
   const [filterDirection, setFilterDirection] = useState<string>('all');
   const [filterMatch, setFilterMatch] = useState<string>('all');
   const [isReclassifying, setIsReclassifying] = useState(false);
   const [isMatching, setIsMatching] = useState(false);
+
+  // URL 参数变化时同步筛选条件
+  useEffect(() => {
+    const urlCategory = searchParams.get('category');
+    if (urlCategory) {
+      setFilterCategory(urlCategory);
+    }
+  }, [searchParams]);
+
+  // 当用户手动切换筛选时，清除 URL 参数
+  const handleCategoryFilterChange = (value: string) => {
+    setFilterCategory(value);
+    if (searchParams.has('category')) {
+      searchParams.delete('category');
+      setSearchParams(searchParams, { replace: true });
+    }
+  };
 
   useEffect(() => {
     loadTransactions();
@@ -139,6 +160,21 @@ const TransactionPage: React.FC = () => {
 
   return (
     <div className="animate-fade-in-up space-y-4">
+      {/* Loading 骨架屏 */}
+      {isLoading && transactions.length === 0 && (
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="bg-white rounded-r-md p-4 shadow-card animate-pulse flex gap-4">
+              <div className="h-4 bg-gray-200 rounded w-24" />
+              <div className="h-4 bg-gray-200 rounded w-12" />
+              <div className="h-4 bg-gray-200 rounded w-32 flex-1" />
+              <div className="h-4 bg-gray-200 rounded w-16" />
+              <div className="h-4 bg-gray-200 rounded w-16" />
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 顶部工具栏 */}
       <div className="flex items-center gap-3 flex-wrap">
         <Input
@@ -151,7 +187,7 @@ const TransactionPage: React.FC = () => {
         />
         <Select
           value={filterCategory}
-          onChange={(v) => setFilterCategory(v as string)}
+          onChange={(v) => handleCategoryFilterChange(v as string)}
           style={{ width: 140 }}
           options={[
             { label: '全部分类', value: 'all' },
@@ -232,8 +268,8 @@ const TransactionPage: React.FC = () => {
       {filtered.length === 0 ? (
         <EmptyState hasAnyData={transactions.length > 0} />
       ) : (
-        <div className="bg-white rounded-r-md shadow-card overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-r-md shadow-card overflow-x-auto">
+          <table className="w-full text-sm min-w-[720px]">
             <thead>
               <tr className="bg-gray-100 text-gray-500 text-left">
                 <th className="px-4 py-3 font-medium">时间</th>
@@ -367,13 +403,24 @@ const TransactionRow: React.FC<{
 };
 
 // 空状态
-const EmptyState: React.FC<{ hasAnyData: boolean }> = ({ hasAnyData }) => (
-  <div className="bg-white rounded-r-md shadow-card p-12 text-center">
-    <p className="text-4xl mb-4">📋</p>
-    <p className="text-gray-500">
-      {hasAnyData ? '没有找到匹配的交易' : '还没有交易数据，去导入页上传账单吧'}
-    </p>
-  </div>
-);
+const EmptyState: React.FC<{ hasAnyData: boolean }> = ({ hasAnyData }) => {
+  const navigate = useNavigate();
+  return (
+    <div className="bg-white rounded-r-md shadow-card p-12 text-center">
+      <p className="text-4xl mb-4">{hasAnyData ? '🔍' : '📋'}</p>
+      <p className="text-gray-700 font-medium mb-1">
+        {hasAnyData ? '没有找到匹配的交易' : '还没有交易数据'}
+      </p>
+      <p className="text-gray-400 text-sm mb-6">
+        {hasAnyData ? '试试调整筛选条件或搜索关键词' : '导入微信或支付宝账单，开始记录你的消费'}
+      </p>
+      {!hasAnyData && (
+        <Button theme="primary" onClick={() => navigate('/')}>
+          去导入账单
+        </Button>
+      )}
+    </div>
+  );
+};
 
 export default TransactionPage;

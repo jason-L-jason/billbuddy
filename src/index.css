@@ -96,3 +96,31 @@ button:active {
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+
+  /* 表格横向滚动提示 */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 工具栏在小屏换行 */
+  .flex-wrap {
+    gap: 8px !important;
+  }
+}
+
+/* 骨架屏闪烁动画 */
+@keyframes shimmer {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
