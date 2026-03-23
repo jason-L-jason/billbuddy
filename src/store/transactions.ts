@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Transaction, ImportRecord, CategoryType, ClassifySource } from '@/types';
 import { db, getImportRecords, getAvailableMonths, deleteTransactions } from '@/db';
 import { classifierOrchestrator } from '@/core/classifier/orchestrator';
+import { getCurrentMonth } from '@/utils/month';
 
 interface TransactionsState {
   transactions: Transaction[];
@@ -24,11 +25,6 @@ interface TransactionsState {
     source: string
   ) => Promise<void>;
   reclassifyAll: () => Promise<{ updated: number; total: number }>;
-}
-
-function getCurrentMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
 export const useTransactionsStore = create<TransactionsState>((set, get) => ({

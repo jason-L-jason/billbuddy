@@ -44,6 +44,13 @@ body {
   line-height: 1.6;
 }
 
+/* 暗色模式 body */
+.dark body,
+html.dark body {
+  background-color: #0a0a0f;
+  color: #e5e7eb;
+}
+
 /* 金额等宽字体 */
 .amount-text {
   font-family: "SF Mono", "Fira Code", "Cascadia Code", "JetBrains Mono", monospace;
@@ -72,6 +79,10 @@ body {
   border-radius: 12px;
 }
 
+.dark .shadow-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
 /* 卡片 hover 上浮效果 */
 .card-hover {
   transition: transform 250ms ease-out, box-shadow 250ms ease-out;
@@ -82,16 +93,43 @@ body {
   box-shadow: 0 4px 16px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.03);
 }
 
+.dark .card-hover:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.2);
+}
+
 /* 按钮点按缩放 */
 button:active {
   transform: scale(0.97);
   transition: transform 100ms ease-out;
 }
 
-/* TDesign Card 统一圆角 */
+/* TDesign Card 统一圆角 + 暗色 */
 .t-card {
   border-radius: 12px !important;
   overflow: hidden;
+}
+
+.dark .t-card {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #e5e7eb !important;
+}
+
+/* TDesign 暗色适配 */
+.dark .t-input {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #e5e7eb !important;
+}
+
+.dark .t-select .t-input {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #e5e7eb !important;
+}
+
+.dark .t-alert {
+  border-color: #374151 !important;
 }
 
 /* 滚动条美化 */
@@ -110,6 +148,18 @@ button:active {
   background: #9ca3af;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* 移动端安全区域 */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* 移动端适配 */
 @media (max-width: 640px) {
   html {
@@ -124,6 +174,16 @@ button:active {
   /* 工具栏在小屏换行 */
   .flex-wrap {
     gap: 8px !important;
+  }
+
+  /* 卡片间距紧凑 */
+  .space-y-6 > * + * {
+    margin-top: 1rem;
+  }
+
+  /* 禁止 hover 上浮（移动端没有 hover） */
+  .card-hover:hover {
+    transform: none;
   }
 }
 

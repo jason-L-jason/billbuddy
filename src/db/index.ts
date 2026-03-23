@@ -75,7 +75,19 @@ export async function clearAllData(): Promise<void> {
     db.taobaoOrders.clear(),
     db.jdOrders.clear(),
     db.importRecords.clear(),
+    db.customRules.clear(),
   ]);
+}
+
+/** 按 "YYYY-MM" 格式获取某月交易 */
+export async function getTransactionsByMonthStr(month: string): Promise<Transaction[]> {
+  const [y, m] = month.split('-').map(Number);
+  const startDate = new Date(y, m - 1, 1).toISOString();
+  const endDate = new Date(y, m, 0, 23, 59, 59, 999).toISOString();
+  return db.transactions
+    .where('transactionTime')
+    .between(startDate, endDate, true, true)
+    .toArray();
 }
 
 /** 获取所有有数据的月份列表（降序） */

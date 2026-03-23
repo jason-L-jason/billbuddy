@@ -5,7 +5,7 @@ import { SearchIcon, DownloadIcon, DeleteIcon, RefreshIcon, ChevronDownIcon, Che
 import { useTransactionsStore } from '@/store/transactions';
 import { Transaction, ALL_CATEGORIES, CATEGORY_COLORS, CategoryType } from '@/types';
 import { formatAmount, formatDate } from '@/utils/format';
-import { db } from '@/db';
+import { db, clearAllData } from '@/db';
 import { orderMatcher } from '@/core/matcher';
 import CategoryBadge from './CategoryBadge';
 
@@ -136,9 +136,7 @@ const TransactionPage: React.FC = () => {
   };
 
   const handleClearData = async () => {
-    await db.transactions.clear();
-    await db.importRecords.clear();
-    await db.taobaoOrders.clear();
+    await clearAllData();
     loadTransactions();
     MessagePlugin.success('数据已清除');
   };

@@ -1,0 +1,25 @@
+{
+  "name": "BillBuddy - 智能账单助手",
+  "short_name": "BillBuddy",
+  "description": "自动分析微信/支付宝账单，一键生成月度消费报告",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F5F6FA",
+  "theme_color": "#2563EB",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "utilities"]
+}
