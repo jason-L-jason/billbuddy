@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Input, Select, Alert, Button, Tag, Popconfirm, MessagePlugin } from 'tdesign-react';
+import { Input, Select, Alert, Button, Tag, Popconfirm, MessagePlugin, Checkbox } from 'tdesign-react';
 import { SearchIcon, DownloadIcon, DeleteIcon, RefreshIcon, ChevronDownIcon, ChevronUpIcon, LinkIcon } from 'tdesign-icons-react';
 import { useTransactionsStore } from '@/store/transactions';
 import { Transaction, ALL_CATEGORIES, CATEGORY_COLORS, CategoryType } from '@/types';
@@ -10,7 +10,7 @@ import { orderMatcher } from '@/core/matcher';
 import CategoryBadge from './CategoryBadge';
 
 const TransactionPage: React.FC = () => {
-  const { transactions, isLoading, loadTransactions, selectedMonth, reclassifyAll } = useTransactionsStore();
+  const { transactions, isLoading, loadTransactions, selectedMonth, reclassifyAll, deleteTransactionsByIds } = useTransactionsStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchText, setSearchText] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>(
@@ -20,6 +20,8 @@ const TransactionPage: React.FC = () => {
   const [filterMatch, setFilterMatch] = useState<string>('all');
   const [isReclassifying, setIsReclassifying] = useState(false);
   const [isMatching, setIsMatching] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // URL 参数变化时同步筛选条件
   useEffect(() => {
@@ -158,6 +160,41 @@ const TransactionPage: React.FC = () => {
     }
   };
 
+  // 选择相关
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const isAllSelected = filtered.length > 0 && filtered.every((t) => selectedIds.has(t.id!));
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((t) => t.id!)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    setIsDeleting(true);
+    try {
+      await deleteTransactionsByIds(Array.from(selectedIds));
+      MessagePlugin.success(`已删除 ${selectedIds.size} 笔交易`);
+      setSelectedIds(new Set());
+    } catch (e) {
+      console.error('删除失败:', e);
+      MessagePlugin.error('删除失败');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="animate-fade-in-up space-y-4">
       {/* Loading 骨架屏 */}
@@ -217,6 +254,17 @@ const TransactionPage: React.FC = () => {
 
         <div className="flex-1" />
 
+        {selectedIds.size > 0 && (
+          <Popconfirm
+            content={`确定删除选中的 ${selectedIds.size} 笔交易吗？此操作不可恢复。`}
+            onConfirm={handleDeleteSelected}
+          >
+            <Button variant="outline" theme="danger" loading={isDeleting}>
+              <DeleteIcon className="mr-1" />
+              删除选中 ({selectedIds.size})
+            </Button>
+          </Popconfirm>
+        )}
         <Button
           variant="outline"
           onClick={handleRunMatch}
@@ -272,6 +320,9 @@ const TransactionPage: React.FC = () => {
           <table className="w-full text-sm min-w-[720px]">
             <thead>
               <tr className="bg-gray-100 text-gray-500 text-left">
+                <th className="px-3 py-3 font-medium w-10">
+                  <Checkbox checked={isAllSelected} onChange={toggleSelectAll} />
+                </th>
                 <th className="px-4 py-3 font-medium">时间</th>
                 <th className="px-4 py-3 font-medium">平台</th>
                 <th className="px-4 py-3 font-medium">交易对方</th>
@@ -287,9 +338,49 @@ const TransactionPage: React.FC = () => {
                   key={txn.id}
                   transaction={txn}
                   onCategoryChange={handleCategoryChange}
+                  selected={selectedIds.has(txn.id!)}
+                  onToggleSelect={() => toggleSelect(txn.id!)}
                 />
               ))}
             </tbody>
+            {/* 合计行 */}
+            <tfoot>
+              <tr className="bg-gray-50 border-t-2 border-gray-200 font-semibold text-sm">
+                <td className="px-3 py-3" />
+                <td className="px-4 py-3 text-gray-700" colSpan={4}>
+                  合计 {filtered.length} 笔
+                  {(() => {
+                    const expenseItems = filtered.filter((t) => t.direction === 'expense');
+                    const incomeItems = filtered.filter((t) => t.direction === 'income');
+                    const parts: string[] = [];
+                    if (expenseItems.length > 0) parts.push(`支出 ${expenseItems.length} 笔`);
+                    if (incomeItems.length > 0) parts.push(`收入 ${incomeItems.length} 笔`);
+                    return parts.length > 0 ? `（${parts.join('，')}）` : '';
+                  })()}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {(() => {
+                    const totalExpense = filtered
+                      .filter((t) => t.direction === 'expense')
+                      .reduce((sum, t) => sum + t.amount, 0);
+                    const totalIncome = filtered
+                      .filter((t) => t.direction === 'income')
+                      .reduce((sum, t) => sum + t.amount, 0);
+                    return (
+                      <div className="space-y-0.5">
+                        {totalExpense > 0 && (
+                          <div className="text-gray-900">-{formatAmount(totalExpense)}</div>
+                        )}
+                        {totalIncome > 0 && (
+                          <div className="text-success">+{formatAmount(totalIncome)}</div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </td>
+                <td className="px-4 py-3" colSpan={2} />
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
@@ -301,7 +392,9 @@ const TransactionPage: React.FC = () => {
 const TransactionRow: React.FC<{
   transaction: Transaction;
   onCategoryChange: (txn: Transaction, cat: CategoryType) => void;
-}> = ({ transaction: txn, onCategoryChange }) => {
+  selected: boolean;
+  onToggleSelect: () => void;
+}> = ({ transaction: txn, onCategoryChange, selected, onToggleSelect }) => {
   const [expanded, setExpanded] = useState(false);
   const isUnclassified = txn.category === '未分类';
   const hasMatch = !!txn.ecommerceMatch;
@@ -311,9 +404,12 @@ const TransactionRow: React.FC<{
       <tr
         className={`border-b border-gray-100 hover:bg-brand-fade transition-colors ${
           isUnclassified ? 'bg-warning-light' : ''
-        } ${hasMatch ? 'cursor-pointer' : ''}`}
+        } ${selected ? 'bg-blue-50' : ''} ${hasMatch ? 'cursor-pointer' : ''}`}
         onClick={() => hasMatch && setExpanded(!expanded)}
       >
+        <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+          <Checkbox checked={selected} onChange={onToggleSelect} />
+        </td>
         <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
           {formatDate(txn.transactionTime)}
         </td>
@@ -372,7 +468,7 @@ const TransactionRow: React.FC<{
       {/* 淘宝商品明细展开行 */}
       {hasMatch && expanded && (
         <tr className="bg-orange-50 border-b border-orange-100">
-          <td colSpan={7} className="px-4 py-3">
+          <td colSpan={8} className="px-4 py-3">
             <div className="ml-4 space-y-1">
               <div className="flex items-center gap-2 text-xs text-orange-600 font-medium mb-2">
                 <span>📦 淘宝订单</span>

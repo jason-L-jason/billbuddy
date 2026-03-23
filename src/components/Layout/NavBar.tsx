@@ -1,32 +1,37 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { DatePicker } from 'tdesign-react';
+import { Select } from 'tdesign-react';
 import { useTransactionsStore } from '@/store/transactions';
 
 const NAV_ITEMS = [
-  { path: '/', label: '导入' },
-  { path: '/dashboard', label: '看板' },
+  { path: '/', label: '首页' },
   { path: '/transactions', label: '明细' },
 ];
+
+function formatMonthLabel(month: string): string {
+  const [y, m] = month.split('-');
+  return `${y}年${parseInt(m)}月`;
+}
 
 const NavBar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedMonth, setSelectedMonth } = useTransactionsStore();
+  const { selectedMonth, setSelectedMonth, availableMonths, initMonth } = useTransactionsStore();
 
-  const handleMonthChange = (value: unknown) => {
-    if (typeof value === 'string' && value) {
-      // DatePicker month mode returns "YYYY-MM"
-      setSelectedMonth(value);
-    }
-  };
+  useEffect(() => {
+    initMonth();
+  }, [initMonth]);
+
+  const monthOptions = availableMonths.length > 0
+    ? availableMonths.map((m) => ({ label: formatMonthLabel(m), value: m }))
+    : [{ label: formatMonthLabel(selectedMonth), value: selectedMonth }];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 h-14 bg-white border-b border-gray-200 flex items-center px-3 sm:px-6"
-         style={{ backdropFilter: 'blur(12px)' }}>
+    <nav className="fixed top-0 left-0 right-0 z-50 h-14 bg-white/80 border-b border-gray-200/60 flex items-center px-3 sm:px-6"
+         style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
       {/* Logo */}
       <div className="flex items-center gap-2 mr-4 sm:mr-8 cursor-pointer flex-shrink-0" onClick={() => navigate('/')}>
-        <div className="w-8 h-8 rounded-r-md flex items-center justify-center text-white font-bold text-sm"
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
              style={{ background: 'linear-gradient(135deg, #2563EB, #7C3AED)' }}>
           B
         </div>
@@ -34,16 +39,18 @@ const NavBar: React.FC = () => {
       </div>
 
       {/* Nav Tabs */}
-      <div className="flex items-center gap-0.5 sm:gap-1">
+      <div className="flex items-center gap-1">
         {NAV_ITEMS.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isActive = item.path === '/'
+            ? location.pathname === '/'
+            : location.pathname.startsWith(item.path);
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`px-3 sm:px-4 py-2 rounded-r-sm text-sm font-medium transition-colors cursor-pointer ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-brand-light text-brand'
+                  ? 'bg-brand-light text-brand shadow-sm'
                   : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
@@ -55,12 +62,12 @@ const NavBar: React.FC = () => {
 
       {/* 月份选择器（右侧） */}
       <div className="ml-auto flex-shrink-0">
-        <DatePicker
-          mode="month"
+        <Select
           value={selectedMonth}
-          onChange={handleMonthChange}
-          clearable={false}
+          onChange={(v) => setSelectedMonth(v as string)}
+          options={monthOptions}
           style={{ width: 140 }}
+          placeholder="选择月份"
         />
       </div>
     </nav>

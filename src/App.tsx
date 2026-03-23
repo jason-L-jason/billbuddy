@@ -1,8 +1,7 @@
 import React from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/Layout/AppLayout';
-import UploadPage from './components/Upload/UploadPage';
-import DashboardPage from './components/Dashboard/DashboardPage';
+import HomePage from './components/Home/HomePage';
 import TransactionPage from './components/TransactionList/TransactionPage';
 
 const App: React.FC = () => {
@@ -10,9 +9,10 @@ const App: React.FC = () => {
     <HashRouter>
       <Routes>
         <Route path="/" element={<AppLayout />}>
-          <Route index element={<UploadPage />} />
-          <Route path="dashboard" element={<DashboardPage />} />
+          <Route index element={<HomePage />} />
           <Route path="transactions" element={<TransactionPage />} />
+          {/* 兼容旧路由：/dashboard 重定向到首页 */}
+          <Route path="dashboard" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </HashRouter>

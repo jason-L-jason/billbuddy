@@ -67,3 +67,23 @@ export async function clearAllData(): Promise<void> {
     db.importRecords.clear(),
   ]);
 }
+
+/** 获取所有有数据的月份列表（降序） */
+export async function getAvailableMonths(): Promise<string[]> {
+  const allTxns = await db.transactions.orderBy('transactionTime').keys();
+  const monthSet = new Set<string>();
+  for (const time of allTxns) {
+    if (typeof time === 'string') {
+      const d = new Date(time);
+      if (!isNaN(d.getTime())) {
+        monthSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      }
+    }
+  }
+  return Array.from(monthSet).sort().reverse();
+}
+
+/** 批量删除交易记录 */
+export async function deleteTransactions(ids: number[]): Promise<void> {
+  await db.transactions.bulkDelete(ids);
+}

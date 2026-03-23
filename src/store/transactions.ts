@@ -1,18 +1,23 @@
 import { create } from 'zustand';
 import { Transaction, ImportRecord, CategoryType, ClassifySource } from '@/types';
-import { db, getImportRecords } from '@/db';
+import { db, getImportRecords, getAvailableMonths, deleteTransactions } from '@/db';
 import { classifierOrchestrator } from '@/core/classifier/orchestrator';
 
 interface TransactionsState {
   transactions: Transaction[];
   importRecords: ImportRecord[];
   selectedMonth: string; // "YYYY-MM" 格式
+  availableMonths: string[]; // 有数据的月份列表（降序）
   isLoading: boolean;
+  monthInitialized: boolean; // 是否已根据数据初始化月份
 
   setSelectedMonth: (month: string) => void;
   loadTransactions: () => Promise<void>;
   loadImportRecords: () => Promise<void>;
+  loadAvailableMonths: () => Promise<void>;
+  initMonth: () => Promise<void>;
   addTransactions: (txns: Transaction[]) => Promise<void>;
+  deleteTransactionsByIds: (ids: number[]) => Promise<void>;
   updateTransactionCategory: (
     id: number,
     category: string,
@@ -30,11 +35,34 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
   transactions: [],
   importRecords: [],
   selectedMonth: getCurrentMonth(),
+  availableMonths: [],
   isLoading: false,
+  monthInitialized: false,
 
   setSelectedMonth: (month: string) => {
     set({ selectedMonth: month });
     get().loadTransactions();
+  },
+
+  // 初始化月份：自动选最新有数据的月份
+  initMonth: async () => {
+    if (get().monthInitialized) return;
+    const months = await getAvailableMonths();
+    set({ availableMonths: months });
+    if (months.length > 0) {
+      const current = getCurrentMonth();
+      // 如果当前月份有数据就用当前月份，否则用最新有数据的月份
+      const target = months.includes(current) ? current : months[0];
+      set({ selectedMonth: target, monthInitialized: true });
+    } else {
+      set({ monthInitialized: true });
+    }
+    await get().loadTransactions();
+  },
+
+  loadAvailableMonths: async () => {
+    const months = await getAvailableMonths();
+    set({ availableMonths: months });
   },
 
   loadTransactions: async () => {
@@ -66,8 +94,15 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
 
   addTransactions: async (txns: Transaction[]) => {
     await db.transactions.bulkAdd(txns);
+    await get().loadAvailableMonths();
     await get().loadTransactions();
     await get().loadImportRecords();
+  },
+
+  deleteTransactionsByIds: async (ids: number[]) => {
+    await deleteTransactions(ids);
+    await get().loadAvailableMonths();
+    await get().loadTransactions();
   },
 
   updateTransactionCategory: async (id, category, source) => {

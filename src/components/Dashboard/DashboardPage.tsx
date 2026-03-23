@@ -169,7 +169,7 @@ const DashboardPage: React.FC = () => {
 };
 
 // 统计卡片
-const StatCard: React.FC<{
+export const StatCard: React.FC<{
   title: string;
   value: string;
   color: string;
@@ -184,13 +184,13 @@ const StatCard: React.FC<{
 
 // ====== 数据计算 ======
 
-interface CategoryItem {
+export interface CategoryItem {
   name: CategoryType;
   amount: number;
   count: number;
 }
 
-interface Stats {
+export interface Stats {
   totalExpense: number;
   totalIncome: number;
   totalCount: number;
@@ -202,7 +202,7 @@ interface Stats {
   topExpenses: Transaction[];
 }
 
-function computeStats(transactions: Transaction[]): Stats {
+export function computeStats(transactions: Transaction[]): Stats {
   const expenses = transactions.filter((t) => t.direction === 'expense');
   const totalExpense = expenses.reduce((s, t) => s + t.amount, 0);
   const totalIncome = transactions
@@ -253,7 +253,7 @@ function computeStats(transactions: Transaction[]): Stats {
 
 // ====== ECharts 配置 ======
 
-function getPieOption(data: CategoryItem[]) {
+export function getPieOption(data: CategoryItem[]) {
   return {
     tooltip: {
       trigger: 'item',
@@ -279,7 +279,7 @@ function getPieOption(data: CategoryItem[]) {
   };
 }
 
-function getBarOption(data: CategoryItem[]) {
+export function getBarOption(data: CategoryItem[]) {
   const sorted = [...data].reverse();
   return {
     tooltip: { trigger: 'axis', formatter: '{b}: ¥{c}' },
