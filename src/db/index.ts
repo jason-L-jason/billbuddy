@@ -25,6 +25,14 @@ export class BillBuddyDB extends Dexie {
       importRecords: '++id, batchId, platform, importTime',
       customRules: '++id, field, keyword, category',
     });
+
+    this.version(3).stores({
+      transactions: '++id, platform, transactionTime, transactionId, category, direction, importBatchId, [platform+transactionId]',
+      taobaoOrders: '++id, orderId, orderTime, importBatchId',
+      jdOrders: '++id, orderId, orderTime, importBatchId',
+      importRecords: '++id, batchId, platform, importTime',
+      customRules: '++id, field, keyword, category, [field+keyword]',
+    });
   }
 }
 

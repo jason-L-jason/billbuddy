@@ -17,6 +17,8 @@ const App: React.FC = () => {
           <Route path="settings" element={<SettingsPage />} />
           {/* 兼容旧路由：/dashboard 重定向到首页 */}
           <Route path="dashboard" element={<Navigate to="/" replace />} />
+          {/* 404 catch-all：未知路由重定向到首页 */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </HashRouter>
