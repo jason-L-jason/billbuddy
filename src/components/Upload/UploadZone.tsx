@@ -5,12 +5,13 @@ import { parseWechatCSV } from '@/core/parser/wechat';
 import { parseWechatXLSX } from '@/core/parser/wechat-xlsx';
 import { parseAlipayCSV } from '@/core/parser/alipay';
 import { parseTaobaoExcel } from '@/core/parser/taobao';
+import { parseJdExcel } from '@/core/parser/jd';
 import { detectCSVPlatform, readFileContent, detectByFileName } from '@/core/parser/detector';
 import { classifierOrchestrator } from '@/core/classifier/orchestrator';
 import { orderMatcher } from '@/core/matcher';
 import { db, generateBatchId, isTransactionExists } from '@/db';
 import { useTransactionsStore } from '@/store/transactions';
-import { Transaction, ImportRecord, TaobaoOrder } from '@/types';
+import { Transaction, ImportRecord, TaobaoOrder, JdOrder } from '@/types';
 
 export interface ParseSummary {
   fileName: string;
@@ -65,10 +66,13 @@ const UploadZone: React.FC<UploadZoneProps> = ({ compact = false, onImportComple
     const totalImported = newSummaries.reduce((s, r) => s + r.newImported, 0);
     if (totalImported > 0) {
       const hasTaobao = newSummaries.some((s) => s.platform === '淘宝');
-      const hasPayment = newSummaries.some((s) => s.platform !== '淘宝');
+      const hasJd = newSummaries.some((s) => s.platform === '京东');
+      const hasEcommerce = hasTaobao || hasJd;
+      const hasPayment = newSummaries.some((s) => s.platform !== '淘宝' && s.platform !== '京东');
 
-      if (hasTaobao) {
-        setProgressText('正在匹配淘宝订单与支付宝交易...');
+      if (hasEcommerce) {
+        const ecomNames = [hasTaobao && '淘宝', hasJd && '京东'].filter(Boolean).join('和');
+        setProgressText(`正在匹配${ecomNames}订单与支付交易...`);
         try {
           const matchStats = await orderMatcher.matchAll();
           if (matchStats.updatedCount > 0) {
@@ -76,7 +80,7 @@ const UploadZone: React.FC<UploadZoneProps> = ({ compact = false, onImportComple
               `成功导入 ${totalImported} 条数据，自动匹配 ${matchStats.exactMatches} 笔精确 + ${matchStats.fuzzyMatches} 笔模糊`
             );
           } else if (!hasPayment) {
-            MessagePlugin.success(`成功导入 ${totalImported} 条淘宝订单`);
+            MessagePlugin.success(`成功导入 ${totalImported} 条${ecomNames}订单`);
           } else {
             MessagePlugin.success(`成功导入 ${totalImported} 条数据`);
           }
@@ -132,11 +136,25 @@ const UploadZone: React.FC<UploadZoneProps> = ({ compact = false, onImportComple
         }
         return await saveTaobaoOrders(taobaoResult, fileName);
       }
+      if (detected.type === 'jd_excel') {
+        const jdResult = await parseJdExcel(file);
+        if (jdResult.errors.length > 0) console.error('京东解析错误:', jdResult.errors);
+        if (jdResult.orders.length === 0) {
+          MessagePlugin.warning(`${fileName} 中没有有效京东订单`);
+          return null;
+        }
+        return await saveJdOrders(jdResult, fileName);
+      }
+      // 未识别的 Excel：依次尝试淘宝 → 京东
       const taobaoResult = await parseTaobaoExcel(file);
       if (taobaoResult.orders.length > 0) {
         return await saveTaobaoOrders(taobaoResult, fileName);
       }
-      MessagePlugin.warning(`暂不支持此 Excel 文件类型，目前支持微信账单 xlsx 和淘宝订单 xlsx`);
+      const jdResult = await parseJdExcel(file);
+      if (jdResult.orders.length > 0) {
+        return await saveJdOrders(jdResult, fileName);
+      }
+      MessagePlugin.warning(`暂不支持此 Excel 文件类型，目前支持微信账单、淘宝订单、京东订单 xlsx`);
       return null;
     }
 
@@ -303,6 +321,66 @@ const UploadZone: React.FC<UploadZoneProps> = ({ compact = false, onImportComple
     };
   };
 
+  const saveJdOrders = async (
+    jdResult: import('@/core/parser/jd').JdParseResult,
+    fileName: string
+  ): Promise<ParseSummary> => {
+    const batchId = generateBatchId();
+    const importTime = new Date().toISOString();
+    let newImported = 0;
+    let duplicateSkipped = 0;
+
+    setProgressText('正在保存京东订单...');
+
+    const ordersToSave: JdOrder[] = [];
+
+    for (const order of jdResult.orders) {
+      const existing = await db.jdOrders
+        .where('orderId')
+        .equals(order.orderId)
+        .filter((o) => o.itemName === order.itemName)
+        .count();
+
+      if (existing > 0) {
+        duplicateSkipped++;
+        continue;
+      }
+
+      ordersToSave.push({
+        ...order,
+        importBatchId: batchId,
+        importTime,
+      });
+    }
+
+    if (ordersToSave.length > 0) {
+      await db.jdOrders.bulkAdd(ordersToSave);
+      newImported = ordersToSave.length;
+
+      const importRecord: ImportRecord = {
+        batchId,
+        fileName,
+        platform: 'jd',
+        recordCount: newImported,
+        importTime,
+        dateRange: jdResult.dateRange
+          ? `${jdResult.dateRange.start.slice(0, 10)} ~ ${jdResult.dateRange.end.slice(0, 10)}`
+          : undefined,
+      };
+      await db.importRecords.add(importRecord);
+    }
+
+    return {
+      fileName,
+      platform: '京东',
+      totalParsed: jdResult.orders.length,
+      newImported,
+      duplicateSkipped,
+      classifiedCount: 0,
+      unclassifiedCount: 0,
+    };
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -381,7 +459,7 @@ const UploadZone: React.FC<UploadZoneProps> = ({ compact = false, onImportComple
 
         <div className="text-sm text-gray-500 space-y-0.5 mb-3">
           <p><strong>支付账单：</strong>微信账单 XLSX/CSV · 支付宝账单 CSV</p>
-          <p><strong>购物清单：</strong>淘宝订单 Excel（可自动匹配支付宝交易）</p>
+          <p><strong>购物清单：</strong>淘宝/京东订单 Excel（可自动匹配支付交易）</p>
         </div>
 
         <Button theme="primary" size={compact ? 'medium' : 'large'}>

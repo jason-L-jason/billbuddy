@@ -108,6 +108,22 @@ export interface TaobaoOrder {
   importTime: string;
 }
 
+// ====== 京东订单 ======
+export interface JdOrder {
+  id?: number;
+  orderId: string;
+  itemName: string;
+  price: number;
+  quantity: number;
+  actualPaid: number;
+  orderTime: string;
+  shopName?: string;
+  status?: string;
+  sku?: string;
+  importBatchId: string;
+  importTime: string;
+}
+
 // ====== 导入记录 ======
 export interface ImportRecord {
   id?: number;

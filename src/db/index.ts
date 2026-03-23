@@ -1,9 +1,10 @@
 import Dexie, { Table } from 'dexie';
-import { Transaction, TaobaoOrder, ImportRecord, CustomRule } from '@/types';
+import { Transaction, TaobaoOrder, JdOrder, ImportRecord, CustomRule } from '@/types';
 
 export class BillBuddyDB extends Dexie {
   transactions!: Table<Transaction, number>;
   taobaoOrders!: Table<TaobaoOrder, number>;
+  jdOrders!: Table<JdOrder, number>;
   importRecords!: Table<ImportRecord, number>;
   customRules!: Table<CustomRule, number>;
 
@@ -13,6 +14,14 @@ export class BillBuddyDB extends Dexie {
     this.version(1).stores({
       transactions: '++id, platform, transactionTime, transactionId, category, direction, importBatchId, [platform+transactionId]',
       taobaoOrders: '++id, orderId, orderTime, importBatchId',
+      importRecords: '++id, batchId, platform, importTime',
+      customRules: '++id, field, keyword, category',
+    });
+
+    this.version(2).stores({
+      transactions: '++id, platform, transactionTime, transactionId, category, direction, importBatchId, [platform+transactionId]',
+      taobaoOrders: '++id, orderId, orderTime, importBatchId',
+      jdOrders: '++id, orderId, orderTime, importBatchId',
       importRecords: '++id, batchId, platform, importTime',
       customRules: '++id, field, keyword, category',
     });
@@ -64,6 +73,7 @@ export async function clearAllData(): Promise<void> {
   await Promise.all([
     db.transactions.clear(),
     db.taobaoOrders.clear(),
+    db.jdOrders.clear(),
     db.importRecords.clear(),
   ]);
 }

@@ -5,6 +5,7 @@ export type DetectedFileType =
   | { type: 'wechat_xlsx'; platform: Platform }
   | { type: 'alipay_csv'; platform: Platform }
   | { type: 'taobao_excel'; platform: 'taobao' }
+  | { type: 'jd_excel'; platform: 'jd' }
   | { type: 'unknown' };
 
 /**
@@ -50,6 +51,9 @@ export function detectByFileName(fileName: string): DetectedFileType {
   }
   if (lower.includes('淘宝') || lower.includes('taobao')) {
     return { type: 'taobao_excel', platform: 'taobao' };
+  }
+  if (lower.includes('京东') || lower.includes('jd') || lower.includes('jingdong')) {
+    return { type: 'jd_excel', platform: 'jd' };
   }
 
   return { type: 'unknown' };
