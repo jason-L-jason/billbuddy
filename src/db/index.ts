@@ -68,8 +68,18 @@ export async function getImportRecords(): Promise<ImportRecord[]> {
   return db.importRecords.orderBy('importTime').reverse().toArray();
 }
 
-/** 清除所有数据 */
+/** 清除所有数据（保留自定义规则） */
 export async function clearAllData(): Promise<void> {
+  await Promise.all([
+    db.transactions.clear(),
+    db.taobaoOrders.clear(),
+    db.jdOrders.clear(),
+    db.importRecords.clear(),
+  ]);
+}
+
+/** 清除所有数据（包括自定义规则） */
+export async function clearAllDataIncludingRules(): Promise<void> {
   await Promise.all([
     db.transactions.clear(),
     db.taobaoOrders.clear(),

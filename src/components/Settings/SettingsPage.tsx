@@ -4,6 +4,7 @@ import { DeleteIcon, DownloadIcon } from 'tdesign-icons-react';
 import { db, clearAllData } from '@/db';
 import { useThemeStore } from '@/store/theme';
 import { useTransactionsStore } from '@/store/transactions';
+import RuleManager from './RuleManager';
 
 const SettingsPage: React.FC = () => {
   const { isDark, toggle } = useThemeStore();
@@ -126,6 +127,12 @@ const SettingsPage: React.FC = () => {
         </div>
       </Card>
 
+      {/* 分类规则 */}
+      <Card className="shadow-card rounded-xl">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">分类规则</h3>
+        <RuleManager />
+      </Card>
+
       {/* 数据管理 */}
       <Card className="shadow-card rounded-xl">
         <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">数据管理</h3>
@@ -163,10 +170,10 @@ const SettingsPage: React.FC = () => {
           <div className="flex items-center justify-between py-2">
             <div>
               <p className="text-sm font-medium text-danger">清除所有数据</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">删除所有交易记录、订单和导入历史</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">删除所有交易记录、订单和导入历史（自定义规则保留）</p>
             </div>
             <Popconfirm
-              content="确定要清除所有数据吗？此操作不可恢复，建议先导出备份。"
+              content="确定要清除所有数据吗？此操作不可恢复，但你的自定义分类规则会保留。建议先导出备份。"
               onConfirm={handleClearAll}
             >
               <Button variant="outline" theme="danger" disabled={stats.transactions === 0}>

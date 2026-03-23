@@ -116,10 +116,9 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
       .filter((t) => t.classifySource !== 'manual')
       .toArray();
 
-    let updated = 0;
-
-    for (const txn of allTxns) {
-      const result = await classifierOrchestrator.classify({
+    // 批量分类（内部已预加载 customRules，0 次额外 IO）
+    const results = await classifierOrchestrator.classifyBatch(
+      allTxns.map((txn) => ({
         counterparty: txn.counterparty,
         description: txn.description,
         alipayCategory: txn.alipayCategory,
@@ -129,21 +128,39 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
         amount: txn.amount,
         direction: txn.direction,
         status: txn.status,
-      });
+      }))
+    );
 
-      // 只更新分类发生变化的记录
+    // 收集需要更新的记录，批量写入
+    const updates: { key: number; changes: Partial<import('@/types').Transaction> }[] = [];
+
+    for (let i = 0; i < allTxns.length; i++) {
+      const txn = allTxns[i];
+      const result = results[i];
+
       if (result.category !== txn.category) {
-        await db.transactions.update(txn.id!, {
-          category: result.category,
-          classifySource: result.source,
-          classifyConfidence: result.confidence,
-          classifyReason: result.reason,
+        updates.push({
+          key: txn.id!,
+          changes: {
+            category: result.category,
+            classifySource: result.source,
+            classifyConfidence: result.confidence,
+            classifyReason: result.reason,
+          },
         });
-        updated++;
       }
     }
 
+    // 批量更新（单次事务）
+    if (updates.length > 0) {
+      await db.transaction('rw', db.transactions, async () => {
+        for (const { key, changes } of updates) {
+          await db.transactions.update(key, changes);
+        }
+      });
+    }
+
     await get().loadTransactions();
-    return { updated, total: allTxns.length };
+    return { updated: updates.length, total: allTxns.length };
   },
 }));

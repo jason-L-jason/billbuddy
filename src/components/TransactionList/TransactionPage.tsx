@@ -8,6 +8,7 @@ import { formatAmount, formatDate } from '@/utils/format';
 import { db, clearAllData } from '@/db';
 import { orderMatcher } from '@/core/matcher';
 import CategoryBadge from './CategoryBadge';
+import LearnRuleDialog from './LearnRuleDialog';
 
 const TransactionPage: React.FC = () => {
   const { transactions, isLoading, loadTransactions, selectedMonth, reclassifyAll, deleteTransactionsByIds } = useTransactionsStore();
@@ -22,6 +23,11 @@ const TransactionPage: React.FC = () => {
   const [isMatching, setIsMatching] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // 学习弹窗状态
+  const [learnDialogVisible, setLearnDialogVisible] = useState(false);
+  const [learnTransaction, setLearnTransaction] = useState<Transaction | null>(null);
+  const [learnCategory, setLearnCategory] = useState<CategoryType | null>(null);
 
   // URL 参数变化时同步筛选条件
   useEffect(() => {
@@ -80,6 +86,26 @@ const TransactionPage: React.FC = () => {
     });
     loadTransactions();
     MessagePlugin.success('分类已更新');
+
+    // 弹出学习弹窗，提示创建规则
+    setLearnTransaction(txn);
+    setLearnCategory(newCategory);
+    setLearnDialogVisible(true);
+  };
+
+  // 规则创建成功后触发重分类
+  const handleRuleCreated = async () => {
+    setIsReclassifying(true);
+    try {
+      const { updated, total } = await reclassifyAll();
+      if (updated > 0) {
+        MessagePlugin.success(`规则已应用：${total} 笔交易中有 ${updated} 笔分类已更新`);
+      }
+    } catch (e) {
+      console.error('重分类失败:', e);
+    } finally {
+      setIsReclassifying(false);
+    }
   };
 
   const handleRunMatch = async () => {
@@ -286,7 +312,7 @@ const TransactionPage: React.FC = () => {
           导出 CSV
         </Button>
         <Popconfirm
-          content="确定要清除所有数据吗？此操作不可恢复。"
+          content="确定要清除所有数据吗？此操作不可恢复，自定义分类规则会保留。"
           onConfirm={handleClearData}
         >
           <Button variant="outline" theme="danger">
@@ -382,6 +408,15 @@ const TransactionPage: React.FC = () => {
           </table>
         </div>
       )}
+
+      {/* 学习规则弹窗 */}
+      <LearnRuleDialog
+        visible={learnDialogVisible}
+        transaction={learnTransaction}
+        newCategory={learnCategory}
+        onClose={() => setLearnDialogVisible(false)}
+        onRuleCreated={handleRuleCreated}
+      />
     </div>
   );
 };
